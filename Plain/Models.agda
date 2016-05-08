@@ -66,3 +66,41 @@ prop_model_intersection_pair P m₁ m₂ mp₁ mp₂ =
          )
       
     }
+
+-- | Coinductive model
+record IsCoiModel {n : ℕ}
+  {Σ : Signature n} (i : Interp Σ) (P : Program Σ) : Set₂ where
+  field
+    backClosed :
+      {a : Term Σ Var} → {bs : List (Term Σ Var)}
+      → (a' : GTerm Σ)
+      → a' ∈ Carrier i
+      → ∃ (λ (σclsp : GSubst Σ ×
+        Any (λ c → a :- bs ≡ c) (prg P))
+      → app (proj₁ σclsp) a ≡ a'
+      → All (λ c → c ∈ Carrier i) (L.map (app (proj₁ σclsp)) bs))
+open IsCoiModel
+
+open import Data.Sum
+open import Data.Product as DP
+
+-- | model union property for a pair of models
+prop_model_union_pair : {n : ℕ} → {Σ : Signature n} →
+  (P : Program Σ)
+  → (m₁ : Interp Σ)
+  → (m₂ : Interp Σ)
+  → (mp₁ : IsCoiModel m₁ P)
+  → (mp₂ : IsCoiModel m₂ P)
+  → IsCoiModel (m₁ ∪ᵢ m₂) P
+prop_model_union_pair P m₁ m₂ mp₁ mp₂ =
+      record { backClosed = λ
+        { a' (inj₁ x) → DP.map (λ i → i)
+          (λ x₂ x₃ → LAl.map inj₁ (x₂ x₃))
+          (backClosed mp₁ a' x)
+        ; a' (inj₂ x) → DP.map (λ i → i)
+          (λ x₂ x₃ → LAl.map inj₂ (x₂ x₃))
+          (backClosed mp₂ a' x)
+        }
+      }
+
+
