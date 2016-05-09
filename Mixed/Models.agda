@@ -121,27 +121,38 @@ record IsCModel {n m : ℕ} {Σ : Signature n m} {var : Set}
 open IsCModel
 
 
-{-
 open import Data.Sum
 open import Data.Product as DP
+open Interp
+
+open import Relation.Binary.PropositionalEquality
 
 -- | model union property for a pair of models
-prop_model_union_pair : {n : ℕ} → {Σ : Signature n} →
-  (P : Program Σ)
+prop_model_union_pair : {n m : ℕ} → {Σ : Signature n m} → {var : Set}
+  (P : Program Σ var)
   → (m₁ : Interp Σ)
   → (m₂ : Interp Σ)
-  → (mp₁ : IsCoiModel m₁ P)
-  → (mp₂ : IsCoiModel m₂ P)
-  → IsCoiModel (m₁ ∪ᵢ m₂) P
-prop_model_union_pair P m₁ m₂ mp₁ mp₂ =
-      record { backClosed = λ
-        { a' (inj₁ x) → DP.map (λ i → i)
-          (λ x₂ x₃ → LAl.map inj₁ (x₂ x₃))
-          (backClosed mp₁ a' x)
-        ; a' (inj₂ x) → DP.map (λ i → i)
-          (λ x₂ x₃ → LAl.map inj₂ (x₂ x₃))
-          (backClosed mp₂ a' x)
-        }
-      }
+  → Carrier-μ m₁ ≡ Carrier-μ m₂
+  → (mp₁ : IsCModel m₁ P)
+  → (mp₂ : IsCModel m₂ P)
+  → IsCModel (m₁ ∪ᵢ m₂) P
+prop_model_union_pair P m₁ m₂ eq mp₁ mp₂ {-with (sym eq) -- | (Carrier-μ m₁)
+... | eq' {-| dm₁-}-} = record { backClosed = λ
+  { a' (inj₁ x) → DP.map
+       (λ atm → atm)
+       (DP.map
+         (λ any → any)
+         (λ w → DP.map (λ eq₁ → eq₁) (λ x₃
+           → LAl.map inj₁ (proj₁ (proj₂ w))
+           , LAl.map inj₁ (proj₂ (proj₂ w))) w))
+       (backClosed mp₁ a' x)
+  ; a' (inj₂ y) → DP.map
+       (λ atm → atm)
+       (DP.map
+         (λ any → any)
+         (λ w → DP.map (λ eq → eq) (λ x₁
+           → LAl.map inj₂ (proj₁ (proj₂ w))
+           , LAl.map inj₂ (proj₂ (proj₂ w))) w))
+       (backClosed mp₂ a' y)
+  } }
 
--}
