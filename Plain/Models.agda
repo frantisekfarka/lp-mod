@@ -132,3 +132,23 @@ prop-model-union P I mps =
            (backClosed (isCoiModel (mps (proj₁ x))) a' (proj₂ x)) }
 
 
+open import Data.Unit
+
+prop-ex-ind-model : {n : ℕ} → {Σ : Signature n}
+  → (P : Program Σ)
+  → IndModel P
+prop-ex-ind-model P = record
+  { iInterp = record { Carrier = U }
+  ; isIndModel = record { forwClosed = λ bs' x σ a bs x₁ x₂ → tt }
+  }
+
+
+open import Data.Empty
+
+prop-ex-coi-model : {n : ℕ} → {Σ : Signature n}
+  → (P : Program Σ)
+  → CoiModel P
+prop-ex-coi-model P = record
+  { cInterp = record { Carrier = ∅ }
+  ; isCoiModel = record { backClosed = λ a' () }
+  }
