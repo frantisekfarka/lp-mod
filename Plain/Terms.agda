@@ -1,4 +1,4 @@
-module Terms where
+module Plain.Terms where
 
 open import Data.Nat
 open import Data.Fin

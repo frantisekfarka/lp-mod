@@ -1,7 +1,7 @@
-module Models where
+module Plain.Models where
 
 open import Data.Nat
-open import Terms
+open import Plain.Terms
 
 -- The (complete) Herbrand universe for Σ
 U' : {n : ℕ} → (Signature n) → Set
@@ -31,7 +31,7 @@ open import Relation.Binary.Core
 
 open Program
 
--- | Inductive model
+-- | Inductive model property
 record IsIndModel {n : ℕ}
   {Σ : Signature n} (i : Interp Σ) (P : Program Σ) : Set₂ where
   field
@@ -45,26 +45,47 @@ record IsIndModel {n : ℕ}
       → (L.map (app σ) bs) ≡ bs'
       → (app σ a ∈ Carrier i)
 open IsIndModel
+
+-- | Ind Model
+record IndModel {n : ℕ}
+  {Σ : Signature n} (P : Program Σ) : Set₂ where
+  field
+    iInterp : Interp Σ
+    isIndModel : IsIndModel iInterp P
+
+open IndModel
+
 open import Data.Product
 open import Data.List.All.Properties -- using (All-map)
 
--- | model intersection property for a pair of models
-prop_model_intersection_pair : {n : ℕ} → {Σ : Signature n} →
+
+{-
+-- | Model intersection
+_∩m_ : {n : ℕ} → {Σ : Signature n} → {P : Program Σ}
+  → (m₁ : IndModel P) → (m₂ : IndModel P)
+  → IndModel P
+_∩m_ {n} {Σ} {P} m₁ m₂ = record
+  { interp = interp m₁ ∩ᵢ interp m₂
+  ; isIndModel = prop-model-intersection-pair P m₁ m₂ }
+-}
+
+⋂ᵢ : {n : ℕ} → {Σ : Signature n} →
+  (I : Set) → (I → Interp Σ)
+  → Interp Σ
+⋂ᵢ I f = record { Carrier = ⋂ I (λ i t → t ∈ Carrier (f i)) }
+
+open import Function
+
+prop-model-intersection : {n : ℕ} → {Σ : Signature n} →
   (P : Program Σ)
-  → (m₁ : Interp Σ)
-  → (m₂ : Interp Σ)
-  → (mp₁ : IsIndModel m₁ P)
-  → (mp₂ : IsIndModel m₂ P)
-  → IsIndModel (m₁ ∩ᵢ m₂) P
-prop_model_intersection_pair P m₁ m₂ mp₁ mp₂ =
---  record { forwClosed = λ bs' x σ a₁ bs pcls pbody
---    → ( forwClosed mp₁ bs' (lemACar₁ x) σ a₁ bs pcls pbody
---      , forwClosed mp₂ bs' (lemACar₂ x) σ a₁ bs pcls pbody ) }
-    record { forwClosed = λ bs' x σ a₁ bs pcls pbody →
-         ( forwClosed mp₁ bs' (LAl.map proj₁ x) σ a₁ bs pcls pbody
-         , forwClosed mp₂ bs' (LAl.map proj₂ x) σ a₁ bs pcls pbody
-         )
-      
+  → (I : Set) -- ^ is non-empty by what argument?
+  → (mps : I → IndModel P)
+  → IsIndModel ( ⋂ᵢ I (iInterp ∘ mps)) P
+prop-model-intersection P I mps =
+  record { forwClosed = λ bs' pbs' σ a bs pcl pbs i →
+    forwClosed (isIndModel (mps i)) bs'
+      (LAl.map (λ k → k i) pbs')
+      σ a bs pcl pbs
     }
 
 -- | Coinductive model
@@ -81,26 +102,33 @@ record IsCoiModel {n : ℕ}
       → All (λ c → c ∈ Carrier i) (L.map (app (proj₁ σclsp)) bs))
 open IsCoiModel
 
-open import Data.Sum
+-- | Coi Model
+record CoiModel {n : ℕ}
+  {Σ : Signature n} (P : Program Σ) : Set₂ where
+  field
+    cInterp : Interp Σ
+    isCoiModel : IsCoiModel cInterp P
+
+open CoiModel
+
+
+⋃ᵢ : {n : ℕ} → {Σ : Signature n} →
+  (I : Set) → (I → Interp Σ)
+  → Interp Σ
+⋃ᵢ I f = record { Carrier = λ x → ⋃ I (λ i t → t ∈ Carrier (f i)) x }
+
 open import Data.Product as DP
 
--- | model union property for a pair of models
-prop_model_union_pair : {n : ℕ} → {Σ : Signature n} →
+-- | model union property 
+prop-model-union : {n : ℕ} → {Σ : Signature n} →
   (P : Program Σ)
-  → (m₁ : Interp Σ)
-  → (m₂ : Interp Σ)
-  → (mp₁ : IsCoiModel m₁ P)
-  → (mp₂ : IsCoiModel m₂ P)
-  → IsCoiModel (m₁ ∪ᵢ m₂) P
-prop_model_union_pair P m₁ m₂ mp₁ mp₂ =
-      record { backClosed = λ
-        { a' (inj₁ x) → DP.map (λ i → i)
-          (λ x₂ x₃ → LAl.map inj₁ (x₂ x₃))
-          (backClosed mp₁ a' x)
-        ; a' (inj₂ x) → DP.map (λ i → i)
-          (λ x₂ x₃ → LAl.map inj₂ (x₂ x₃))
-          (backClosed mp₂ a' x)
-        }
-      }
+  → (I : Set) -- ^ is non-empty by what argument?
+  → (mps : I → CoiModel P)
+  → IsCoiModel ( ⋃ᵢ I (cInterp ∘ mps)) P
+prop-model-union P I mps =
+  record { backClosed = λ a' x →
+    DP.map (λ id → id)
+           (λ x₂ x₃ → LAl.map (λ x₄ → proj₁ x , x₄) (x₂ x₃))
+           (backClosed (isCoiModel (mps (proj₁ x))) a' (proj₂ x)) }
 
 
